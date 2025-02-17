@@ -1,3 +1,5 @@
+@import "@/public/leaflet.css";
+
 :root {
   --background: #ffffff;
   --foreground: #171717;
