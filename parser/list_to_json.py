@@ -1,9 +1,19 @@
 import datetime
 import json
 import re
-import googlemaps
+from google.maps import places_v1
+import os
+import requests
+import urllib.parse
 from env import GOOGLE_API_KEY
+import sys
 
+if len(sys.argv) < 3:
+    print("Usage: python list_to_json.py <list_path> <json_path>")
+    sys.exit(1)
+
+list_path = sys.argv[1]
+json_path = sys.argv[2]
 replacements = {
     "S.F.": "San Francisco",
     "Oakand": "Oakland",
@@ -13,8 +23,7 @@ replacements = {
 }
 list_date_regex = r"(january|february|march|april|may|june|july|august|september|october|november|december)\s+\d{1,2},\s+20\d{2}"
 date_regex = r"^((?:jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)\s+\d{1,2})\s+(?:mon|tue|wed|thr|fri|sat|sun)\s+"
-gmaps = googlemaps.Client(key=GOOGLE_API_KEY)
-
+current_dir = os.path.dirname(os.path.realpath(__file__))
 def split_on_newline_and_trim(string: str) -> list:
     split = string.split("\n")
     split = list(map(str.strip, split))
@@ -88,24 +97,69 @@ def parse_show_details(show_lines: list[str], location: str = None) -> dict:
         "raw": details.strip() if details else None
     }
 
-def get_lat_lng_from_google_result(google_result):
-    return [
-        google_result[0]["geometry"]["location"]["lat"],
-        google_result[0]["geometry"]["location"]["lng"],
-    ]
+venue_img_dir = f"{current_dir}/../public/images/venues"
+client = places_v1.PlacesClient()
+def save_image(url, filename):
+    response = requests.get(url)
+    if not response.ok:
+        return None
+    file_path = os.path.join(venue_img_dir, filename)
+    with open(file_path, 'wb') as file:
+        file.write(response.content)
+    return f"/images/venues/{filename}"
 
-def get_show_coords(show_location):
-    if not show_location:
-        return [None, None]
-    geocode_cache = get_geocode_cache()
-    if show_location in geocode_cache:
-        return get_lat_lng_from_google_result(geocode_cache[show_location])
-    geocode_result = gmaps.geocode(show_location)
-    if geocode_result:
-        geocode_cache[show_location] = geocode_result
-        write_geocode_cache(geocode_cache)
-        return get_lat_lng_from_google_result(geocode_result)
-    return [None, None]
+def fetch_venue_data(location):
+    request = places_v1.SearchTextRequest(
+        text_query=location,
+    )
+
+    fieldMask = "places.name"
+    response = client.search_text(request=request, metadata=[("x-goog-fieldmask", fieldMask)])
+
+    if len(response.places) == 0:
+        return None
+    place_id = response.places[0].name
+    request = places_v1.GetPlaceRequest(
+        name=place_id
+    )
+
+    fieldMask = "displayName,shortFormattedAddress,photos,location"
+    response = client.get_place(request=request, metadata=[("x-goog-fieldmask", fieldMask)])
+    if not response:
+        return None
+    venue_data = {}
+    venue_data["id"] = place_id
+    venue_data["name"] = response.display_name.text
+    venue_data["address"] = response.short_formatted_address
+    venue_data["lat"] = response.location.latitude
+    venue_data["lng"] = response.location.longitude
+
+    # Clean the filename
+    filename = f"{venue_data['name']} {venue_data['address']}"
+    filename = re.sub(r'[^a-zA-Z0-9 ]', '', filename)
+    filename = f"{filename.replace(' ', '_')}.jpg"
+
+    # Check if a file with the same name already exists
+    image_exists = os.path.exists(f"{venue_img_dir}/{filename}")
+
+    if image_exists:
+        venue_data["photo"] = f"/images/venues/{filename}"
+
+    elif response and len(response.photos) > 0:
+        request = places_v1.GetPhotoMediaRequest(
+            name=f"{response.photos[0].name}/media",
+            max_width_px=300,
+            max_height_px=300
+        )
+        response = client.get_photo_media(request)
+        venue_data["photo"] = save_image(response.photo_uri, filename)
+
+    else:
+        encoded_location = urllib.parse.quote_plus(venue_data["formatted_address"])
+        streetview_url = f"https://maps.googleapis.com/maps/api/streetview?location={encoded_location}&size=300x300&key={GOOGLE_API_KEY}"
+        venue_data["photo"] = save_image(streetview_url, filename)
+
+    return venue_data
 
 
 id = 0
@@ -118,7 +172,7 @@ def parse_show(show_lines: list[str], list_created_date: datetime.date) -> dict:
     show_lines[0] = first_line.replace(raw_show_date, "")
     show_details = parse_show_details(show_lines)
     show_location = parse_show_location(show_lines, show_details)
-    [lat, lng] = get_show_coords(show_location)
+    venue = get_show_venue(show_location)
 
     if show_location and not show_details["raw"]:
         show_details = parse_show_details(show_lines, show_location)
@@ -139,8 +193,7 @@ def parse_show(show_lines: list[str], list_created_date: datetime.date) -> dict:
         "date": show_date.strftime("%Y-%m-%d"),
         "location": show_location,
         "bands": bands,
-        "lat": lat,
-        "lng": lng,
+        "venue": venue,
         "details": show_details
     }
 
@@ -164,7 +217,9 @@ def get_shows_block(content: str) -> str:
 def parse_shows(content, list_created_date):
     shows_block = get_shows_block(content)
     split = split_shows(shows_block)
-    return list(map(lambda show: parse_show(show, list_created_date), split))
+    # split = split[:5]
+    parsed_shows = list(map(lambda show: parse_show(show, list_created_date), split))
+    return parsed_shows
 
 def parse_list_created_date(content: str) -> datetime.date:
     match = re.search(list_date_regex, content, re.IGNORECASE)
@@ -172,34 +227,44 @@ def parse_list_created_date(content: str) -> datetime.date:
         return datetime.datetime.strptime(match.group(), "%B %d, %Y").date()
     return None
 
+def get_show_venue(location):
+    if not location:
+        return None
+    venue_cache = get_venue_cache()
+    if location in venue_cache:
+        return venue_cache[location]
+    venue_cache[location] = fetch_venue_data(location)
+    write_venue_cache(venue_cache)
+    return venue_cache[location]
+
 known_cities = None
 def get_known_cities():
     global known_cities
     if known_cities is not None:
         return known_cities
-    with open("./known_cities.json") as file:
+    with open(f"{current_dir}/known_cities.json") as file:
         content = file.read()
         known_cities = json.loads(content)
         return known_cities
 
-geocode_cache = None
-def get_geocode_cache():
-    global geocode_cache
-    if geocode_cache is not None:
-        return geocode_cache
-    with open("./geocode_cache.json") as file:
+venue_cache = None
+def get_venue_cache():
+    global venue_cache
+    if venue_cache is not None:
+        return venue_cache
+    with open(f"{current_dir}/venue_cache.json") as file:
         content = file.read()
-        geocode_cache = json.loads(content)
-        return geocode_cache
+        venue_cache = json.loads(content)
+        return venue_cache
 
-def write_geocode_cache(new_geocode_cache):
-    global geocode_cache
-    geocode_cache = new_geocode_cache
-    with open("./geocode_cache.json", "w") as file:
-        json.dump(new_geocode_cache, file, indent=4)
+def write_venue_cache(new_venue_cache):
+    global venue_cache
+    venue_cache = new_venue_cache
+    with open(f"{current_dir}/venue_cache.json", "w") as file:
+        json.dump(new_venue_cache, file, indent=4)
 
 def parse_list():
-    with open('./list.txt', 'r') as file:
+    with open(list_path, 'r') as file:
         content = file.read()
         for key, replacement in replacements.items():
             content = content.replace(key, replacement)
@@ -210,4 +275,6 @@ def parse_list():
             "shows": shows
         }
 
-print(json.dumps(parse_list(), indent=4))
+parsed = parse_list()
+with open(json_path, "w") as file:
+    json.dump(parsed, file, indent=4)
