@@ -5,7 +5,7 @@ import os
 import requests
 import urllib.parse
 import sys
-from env import GOOGLE_API_KEY, MYSQL_DB, MYSQL_HOST, MYSQL_USER, MYSQL_PASSWORD
+from env import GOOGLE_API_KEY, MYSQL_DB, MYSQL_HOST_DEV, MYSQL_HOST_PROD, MYSQL_USER, MYSQL_PASSWORD
 from google.maps import places_v1
 import mysql.connector
 from mysql.connector import Error as MysqlError
@@ -28,9 +28,10 @@ list_date_regex = r"(january|february|march|april|may|june|july|august|september
 date_regex = r"^((?:jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)\s+\d{1,2})\s+(?:mon|tue|wed|thr|fri|sat|sun)\s+"
 current_dir = os.path.dirname(os.path.realpath(__file__))
 def get_db():
+    mysql_host = MYSQL_HOST_PROD if os.environ.get("ENV") == "PROD" else MYSQL_HOST_DEV
     try:
         connection = mysql.connector.connect(
-            host=MYSQL_HOST,
+            host=mysql_host,
             database=MYSQL_DB,
             user=MYSQL_USER,
             password=MYSQL_PASSWORD
