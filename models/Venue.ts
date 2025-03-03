@@ -11,3 +11,13 @@ export interface Show {
     lng: number;
     details: Details;
 }
+
+export interface Venue {
+    id: string;
+    name: string;
+    formatted_address: string;
+    lat: number;
+    lng: number;
+    photo: string
+    shows: Show[]
+}

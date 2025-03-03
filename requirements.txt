@@ -1,1 +1,2 @@
-googlemaps
+google-maps-places
+mysql-connector-python

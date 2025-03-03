@@ -1,29 +1,46 @@
 import datetime
 import json
 import re
-from google.maps import places_v1
 import os
 import requests
 import urllib.parse
-from env import GOOGLE_API_KEY
 import sys
+from env import GOOGLE_API_KEY, MYSQL_DB, MYSQL_HOST, MYSQL_USER, MYSQL_PASSWORD
+from google.maps import places_v1
+import mysql.connector
+from mysql.connector import Error as MysqlError
 
-if len(sys.argv) < 3:
-    print("Usage: python list_to_json.py <list_path> <json_path>")
+if len(sys.argv) < 2:
+    print("Usage: python list_to_json.py <list_path>")
     sys.exit(1)
 
 list_path = sys.argv[1]
-json_path = sys.argv[2]
 replacements = {
     "S.F.": "San Francisco",
     "Oakand": "Oakland",
     "Oaland": "Oakland",
     "Daily City": "Daly City",
     "Memlo Park": "Menlo Park",
+    "Ugra Deva Loka, ": "", # wtf
+    " & ": " and ", # of course there's a band called Amprs&nd
 }
 list_date_regex = r"(january|february|march|april|may|june|july|august|september|october|november|december)\s+\d{1,2},\s+20\d{2}"
 date_regex = r"^((?:jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)\s+\d{1,2})\s+(?:mon|tue|wed|thr|fri|sat|sun)\s+"
 current_dir = os.path.dirname(os.path.realpath(__file__))
+def get_db():
+    try:
+        connection = mysql.connector.connect(
+            host=MYSQL_HOST,
+            database=MYSQL_DB,
+            user=MYSQL_USER,
+            password=MYSQL_PASSWORD
+        )
+        if connection.is_connected():
+            return connection
+    except MysqlError as e:
+        log(f"Error while connecting to MySQL: {e}")
+        return None
+
 def split_on_newline_and_trim(string: str) -> list:
     split = string.split("\n")
     split = list(map(str.strip, split))
@@ -43,6 +60,7 @@ def parse_show_date(raw_show_date: str, list_created_date: datetime.date) -> dat
 
 def parse_show_location(show_lines: list[str], details):
     location_line = None
+    location = None
     for line in show_lines[1:]: # first line will not have "at "
         if line.startswith("at "):
             location_line = line[3:].strip()
@@ -62,23 +80,22 @@ def parse_show_location(show_lines: list[str], details):
     known_cities = get_known_cities()
     for known_city in known_cities:
         if location_line.endswith(known_city):
-            return location_line
+            location = location_line
 
-    for known_city in known_cities:
-        if known_city in location_line:
-            return location_line[:location_line.index(known_city) + len(known_city)]
+    if not location:
+        for known_city in known_cities:
+            if known_city in location_line:
+                location = location_line[:location_line.index(known_city) + len(known_city)]
 
-    if "a/a" in location_line:
-        return location_line[:location_line.index("a/a")]
+    if not location and "a/a" in location_line:
+        location = location_line[:location_line.index("a/a")]
 
-    match = re.search(r"\s\d{1,2}\+", location_line)
-    if match:
-        return location_line[:match.start()]
+    if not location:
+        match = re.search(r"\s\d{1,2}\+", location_line)
+        if match:
+            location = location_line[:match.start()]
 
-    return None
-
-def parse_bands(show_lines: list[str]) -> list:
-    print()
+    return location.strip() if location else None
 
 def parse_show_details(show_lines: list[str], location: str = None) -> dict:
     joined = " ".join(show_lines)
@@ -93,9 +110,62 @@ def parse_show_details(show_lines: list[str], location: str = None) -> dict:
     if match:
         details = joined[match.start():]
 
-    return {
-        "raw": details.strip() if details else None
+    start_time = None
+    end_time = None
+    time_match = re.search(
+        r"(\d{1,2}(?:\:\d{2})?(?:am|pm))(?:(?:/| til )(\d{1,2}(?:\:\d{2})?(?:am|pm)))?",
+        joined,
+        re.IGNORECASE
+    )
+    if time_match:
+        start_time = convert_time_string(time_match.group(1))
+        if time_match.group(2):
+            end_time = convert_time_string(time_match.group(2))
+
+    cost = None
+    cost_match = re.search(
+        r"((?:\$\d(?:.+\(.*(?:\$[^)]+|\bfree\b[^)]*)\)|[^\s]+)?)|\bfree\b)",
+        joined,
+        re.IGNORECASE
+    )
+    if cost_match:
+        cost = cost_match.group(1)
+
+    age_limit = None
+    age_limit_match = re.search(
+        r"((?<!\$)(?:\d+\+(?:.+ with adult\))?)|\ba/a\b)",
+        joined,
+        re.IGNORECASE
+    )
+    if age_limit_match:
+        age_limit = age_limit_match.group()
+
+    sell_out_likely = True if re.search(r" \$( |$)", joined) else None
+    under_21_pays_more = True if re.search(r" \^( |$)", joined) else None
+    mosh_pit = True if re.search(r" @( |$)", joined) else None
+    no_ins_outs = True if re.search(r" #( |$)", joined) else None
+    sold_out = True if re.search(r"\(sold out\)", joined) else None
+
+    show_details = {
+        "raw": details.strip() if details else None,
+        "start_time": start_time,
+        "end_time": end_time,
+        "cost": cost,
+        "age_limit": age_limit,
+        "sell_out_likely": sell_out_likely,
+        "under_21_pays_more": under_21_pays_more,
+        "mosh_pit": mosh_pit,
+        "no_ins_outs": no_ins_outs,
+        "sold_out": sold_out,
     }
+
+    return show_details
+
+def convert_time_string(time_string):
+    return datetime.datetime.strptime(
+        time_string,
+        "%I:%M%p" if ":" in time_string else "%I%p"
+    ).time().strftime("%H:%M:%S")
 
 venue_img_dir = f"{current_dir}/../public/images/venues"
 client = places_v1.PlacesClient()
@@ -108,31 +178,59 @@ def save_image(url, filename):
         file.write(response.content)
     return f"/images/venues/{filename}"
 
-def fetch_venue_data(location):
+def fetch_google_place_id(location):
     request = places_v1.SearchTextRequest(
         text_query=location,
     )
 
-    fieldMask = "places.name"
+    fieldMask = "places.id"
     response = client.search_text(request=request, metadata=[("x-goog-fieldmask", fieldMask)])
+    if not response:
+        log(f"No response for location {location}!")
+        return None
 
     if len(response.places) == 0:
         return None
-    place_id = response.places[0].name
+    return response.places[0].id
+
+def fetch_and_cache_venue_data(location):
+    place_id = fetch_google_place_id(location)
+    if not place_id:
+        return None
+
+    db = get_db()
+    cursor = db.cursor(dictionary=True)
+    cursor.execute("SELECT id FROM venues WHERE google_place_id = %s", [place_id])
+    result = cursor.fetchone()
+    if result:
+        venue_id = result["id"]
+        cursor.execute("""INSERT INTO locations_venues (location, venue_id)
+            VALUES (%s, %s)""", [location, venue_id])
+        return
+
     request = places_v1.GetPlaceRequest(
-        name=place_id
+        name=f"places/{place_id}"
     )
 
-    fieldMask = "displayName,shortFormattedAddress,photos,location"
+    fieldMask = "displayName,shortFormattedAddress,addressComponents,photos,location"
     response = client.get_place(request=request, metadata=[("x-goog-fieldmask", fieldMask)])
     if not response:
         return None
     venue_data = {}
-    venue_data["id"] = place_id
+    venue_data["google_place_id"] = place_id
     venue_data["name"] = response.display_name.text
     venue_data["address"] = response.short_formatted_address
     venue_data["lat"] = response.location.latitude
     venue_data["lng"] = response.location.longitude
+    venue_data["city"] = None
+    venue_data["photo"] = None
+
+    known_cities = get_known_cities()
+    for component in response.address_components:
+        if "locality" in component.types:
+            venue_data["city"] = component.long_text
+            if component.long_text not in known_cities:
+                save_city(component.long_text)
 
     # Clean the filename
     filename = f"{venue_data['name']} {venue_data['address']}"
@@ -155,16 +253,25 @@ def fetch_venue_data(location):
         venue_data["photo"] = save_image(response.photo_uri, filename)
 
     else:
-        encoded_location = urllib.parse.quote_plus(venue_data["formatted_address"])
+        encoded_location = urllib.parse.quote_plus(venue_data["address"])
         streetview_url = f"https://maps.googleapis.com/maps/api/streetview?location={encoded_location}&size=300x300&key={GOOGLE_API_KEY}"
         venue_data["photo"] = save_image(streetview_url, filename)
 
-    return venue_data
+    db = get_db()
+    cursor = db.cursor()
+    cursor.execute("""INSERT INTO venues
+        (google_place_id, name, address, city, lat, lng, photo)
+        VALUES
+        (%(google_place_id)s, %(name)s, %(address)s, %(city)s, %(lat)s, %(lng)s, %(photo)s)""", venue_data)
+    venue_id = cursor.lastrowid
+    cursor.execute("""INSERT INTO locations_venues (location, venue_id)
+        VALUES (%s, %s)""", [location, venue_id])
+    db.commit()
 
 
-id = 0
-def parse_show(show_lines: list[str], list_created_date: datetime.date) -> dict:
-    global id
+
+def parse_and_save_show(show: str, list_created_date: datetime.date) -> dict:
+    show_lines = show.split("\n")
     first_line = show_lines[0]
     date_match = re.match(date_regex, first_line, re.IGNORECASE)
     show_date = parse_show_date(date_match.group(1), list_created_date)
@@ -173,6 +280,10 @@ def parse_show(show_lines: list[str], list_created_date: datetime.date) -> dict:
     show_details = parse_show_details(show_lines)
     show_location = parse_show_location(show_lines, show_details)
     venue = get_show_venue(show_location)
+
+    if not venue:
+        log(f"Could not parse venue from {show_location}")
+        return
 
     if show_location and not show_details["raw"]:
         show_details = parse_show_details(show_lines, show_location)
@@ -187,19 +298,52 @@ def parse_show(show_lines: list[str], list_created_date: datetime.date) -> dict:
     if show_line.endswith(","):
         show_line = show_line[:len(show_line) - 1]
     bands = re.split(r",\s+", show_line)
-    id = id + 1
-    return {
-        "id": id,
+    bands = list(map(str.strip, bands))
+    parsed_show = {
         "date": show_date.strftime("%Y-%m-%d"),
-        "location": show_location,
-        "bands": bands,
-        "venue": venue,
-        "details": show_details
+        "venue_id": venue[0],
+        "raw": show,
+        "start_time": show_details["start_time"],
+        "end_time": show_details["end_time"],
+        "cost": show_details["cost"],
+        "age_limit": show_details["age_limit"],
+        "sell_out_likely": show_details["sell_out_likely"],
+        "under_21_pays_more": show_details["under_21_pays_more"],
+        "mosh_pit": show_details["mosh_pit"],
+        "no_ins_outs": show_details["no_ins_outs"],
+        "sold_out": show_details["sold_out"],
     }
 
-def split_shows(shows_block: str) -> list:
+    db = get_db()
+    cursor = db.cursor(dictionary=True)
+    cursor.execute("""INSERT INTO shows
+        (date, venue_id, raw, start_time,
+        end_time, cost, age_limit, sell_out_likely, under_21_pays_more,
+        mosh_pit, no_ins_outs, sold_out)
+        VALUES
+        (%(date)s, %(venue_id)s, %(raw)s, %(start_time)s,
+        %(end_time)s, %(cost)s, %(age_limit)s, %(sell_out_likely)s, %(under_21_pays_more)s,
+        %(mosh_pit)s, %(no_ins_outs)s, %(sold_out)s)""", parsed_show)
+    show_id = cursor.lastrowid
+
+    for band in bands:
+        band.replace("&", "And")
+        cursor.execute("SELECT id FROM bands WHERE name = %s", [band])
+        result = cursor.fetchone()
+        if result:
+            band_id = result["id"]
+        else:
+            log(f"Adding new band to the roster: {band}")
+            cursor.execute("INSERT INTO bands (name) VALUES (%s)", [band])
+            band_id = cursor.lastrowid
+        cursor.execute("""INSERT INTO bands_shows (band_id, show_id)
+            VALUES (%s, %s)""", [band_id, show_id])
+    db.commit()
+
+def split_shows(shows_block: str) -> list[str]:
     shows = re.split(r"\n(?=[a-z])", shows_block)
     shows = list(map(split_on_newline_and_trim, shows))
+    shows = list(map(lambda show: "\n".join(show), shows))
     return shows
 
 def get_shows_block(content: str) -> str:
@@ -214,12 +358,32 @@ def get_shows_block(content: str) -> str:
     content = content.strip()
     return content
 
-def parse_shows(content, list_created_date):
+show_cache = set()
+def parse_and_save_shows(content, list_created_date):
     shows_block = get_shows_block(content)
-    split = split_shows(shows_block)
-    # split = split[:5]
-    parsed_shows = list(map(lambda show: parse_show(show, list_created_date), split))
-    return parsed_shows
+    shows = split_shows(shows_block)
+    db = get_db()
+    cursor = db.cursor(dictionary=True)
+    for show in shows:
+        show_cache.add(show)
+        cursor.execute(
+            "SELECT id, deleted FROM shows WHERE date >= CURDATE() AND raw = %s", [show]
+        )
+        result = cursor.fetchone()
+        if result:
+            if result["deleted"]:
+                undelete_show(result["id"])
+            continue
+        log(f"Found new show: {show}, parsing!")
+        parse_and_save_show(show, list_created_date)
+
+def undelete_show(id):
+    db = get_db()
+    cursor = db.cursor()
+    cursor.execute("UPDATE shows SET deleted = 0 WHERE id = %s", [id])
+    cursor.execute("UPDATE bands_shows SET deleted = 0 WHERE id = %s", [id])
+    db.commit()
+    print()
 
 def parse_list_created_date(content: str) -> datetime.date:
     match = re.search(list_date_regex, content, re.IGNORECASE)
@@ -227,35 +391,50 @@ def parse_list_created_date(content: str) -> datetime.date:
         return datetime.datetime.strptime(match.group(), "%B %d, %Y").date()
     return None
 
-def get_show_venue(location):
+def get_show_venue(location: str):
     if not location:
         return None
-    venue_cache = get_venue_cache()
-    if location in venue_cache:
-        return venue_cache[location]
-    venue_cache[location] = fetch_venue_data(location)
-    write_venue_cache(venue_cache)
-    return venue_cache[location]
+    location = location.strip()
+    cached_venue = get_venue_from_cache(location)
+    if cached_venue:
+        return cached_venue
 
-known_cities = None
+    fetch_and_cache_venue_data(location)
+    return get_venue_from_cache(location)
+
+def get_venue_from_cache(location: str):
+    if not location:
+        return None
+    location = location.strip()
+    db = get_db()
+    cursor = db.cursor()
+    cursor.execute("""SELECT venues.* FROM locations_venues
+        JOIN venues ON locations_venues.venue_id = venues.id
+        WHERE location = %s""", [location])
+    result = cursor.fetchone()
+    return result
+
+known_cities_cache = None
 def get_known_cities():
-    global known_cities
-    if known_cities is not None:
-        return known_cities
-    with open(f"{current_dir}/known_cities.json") as file:
-        content = file.read()
-        known_cities = json.loads(content)
-        return known_cities
+    global known_cities_cache
+    if known_cities_cache:
+        return known_cities_cache
 
-venue_cache = None
-def get_venue_cache():
-    global venue_cache
-    if venue_cache is not None:
-        return venue_cache
-    with open(f"{current_dir}/venue_cache.json") as file:
-        content = file.read()
-        venue_cache = json.loads(content)
-        return venue_cache
+    db = get_db()
+    cursor = db.cursor()
+    cursor.execute("SELECT name FROM cities")
+    cities = []
+    result = cursor.fetchall()
+    for entry in result:
+        cities.append(entry[0])
+    known_cities_cache = cities
+    return cities
+
+def save_city(city):
+    db = get_db()
+    cursor = db.cursor()
+    cursor.execute("INSERT INTO cities (name) VALUES (%s)", [city])
+    db.commit()
 
 def write_venue_cache(new_venue_cache):
     global venue_cache
@@ -263,18 +442,33 @@ def write_venue_cache(new_venue_cache):
     with open(f"{current_dir}/venue_cache.json", "w") as file:
         json.dump(new_venue_cache, file, indent=4)
 
-def parse_list():
+def remove_stale_shows():
+    db = get_db()
+
+def parse_and_save_list():
     with open(list_path, 'r') as file:
         content = file.read()
         for key, replacement in replacements.items():
             content = content.replace(key, replacement)
         list_created_date = parse_list_created_date(content)
-        shows = parse_shows(content, list_created_date)
-        return {
-            "created_date": list_created_date.strftime("%Y-%m-%d") if list_created_date else None,
-            "shows": shows
-        }
+        parse_and_save_shows(content, list_created_date)
 
-parsed = parse_list()
-with open(json_path, "w") as file:
-    json.dump(parsed, file, indent=4)
+def remove_stale_shows():
+    global show_cache
+    db = get_db()
+    cursor = db.cursor(dictionary=True)
+    cursor.execute("SELECT id, raw FROM shows WHERE date >= CURDATE() AND deleted = 0")
+    result = cursor.fetchall()
+    for entry in result:
+        if not entry["raw"] in show_cache:
+            log(f"show {entry['raw']} not in show_cache, deleting show id {entry['id']}")
+            cursor.execute("UPDATE bands_shows SET deleted = 1 WHERE show_id = %s", [entry["id"]])
+            cursor.execute("UPDATE shows SET deleted = 1 WHERE id = %s", [entry["id"]])
+    db.commit()
+
+def log(message: str):
+    current_time = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    print(f"[{current_time}] {message}")
+
+parse_and_save_list()
+remove_stale_shows()
