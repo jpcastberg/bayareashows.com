@@ -13,4 +13,6 @@ else
 fi
 
 script_dir=$(dirname "$(readlink -f "$0")")
+source "$script_dir/../venv/bin/activate"
+pip install -q -r "$script_dir/../requirements.txt"
 python3 "$script_dir/list_to_json.py" "$list_file_path"
