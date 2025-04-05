@@ -114,7 +114,7 @@ def parse_show_details(show_lines: list[str], location: str = None) -> dict:
     start_time = None
     end_time = None
     time_match = re.search(
-        r"(\d{1,2}(?:\:\d{2})?(?:am|pm))(?:(?:/| til )(\d{1,2}(?:\:\d{2})?(?:am|pm)))?",
+        r"((?:[012]{2}|[1-9])(?:\:[0-5][0-9])?(?:am|pm))(?:(?:/| til )((?:[012]{2}|[1-9])(?:\:[0-5][0-9])?(?:am|pm)))?",
         joined,
         re.IGNORECASE
     )
@@ -376,7 +376,10 @@ def parse_and_save_shows(content, list_created_date):
                 undelete_show(result["id"])
             continue
         log(f"Found new show: {show}, parsing!")
-        parse_and_save_show(show, list_created_date)
+        try:
+            parse_and_save_show(show, list_created_date)
+        except Exception as err:
+            print(f"Exception while parsing show: '{show}' '{err}'")
 
 def undelete_show(id):
     db = get_db()
