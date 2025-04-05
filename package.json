@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dockerPush": "sudo docker build -t 'jpcastberg/bayareashows:latest' . && sudo docker push 'jpcastberg/bayareashows:latest'",
+    "dockerPush": "sudo docker build --no-cache -t 'jpcastberg/bayareashows:latest' . && sudo docker push 'jpcastberg/bayareashows:latest'",
     "dev": "next dev --turbopack",
     "build": "next build",
     "start": "next start",

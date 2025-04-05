@@ -1,4 +1,4 @@
 #!/bin/bash
 cd /app
-npm ci
+npm install
 npm run start
