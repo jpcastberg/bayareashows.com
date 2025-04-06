@@ -1,9 +1,11 @@
 import mysql from "mysql2/promise";
 import "dotenv/config";
-import { readFile } from "fs/promises";
+
+const host = process.env.ENV === "PROD" ?
+    process.env.MYSQL_HOST_PROD : process.env.MYSQL_HOST_DEV;
 
 const connection = await mysql.createConnection({
-    host: "localhost",
+    host,
     user: process.env.MYSQL_USER,
     password: process.env.MYSQL_PASSWORD,
     database: process.env.MYSQL_DATABASE,

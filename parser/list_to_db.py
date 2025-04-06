@@ -10,12 +10,12 @@ import mysql.connector
 from mysql.connector import Error as MysqlError
 
 try:
-    from env import GOOGLE_API_KEY, MYSQL_DB, MYSQL_HOST_DEV, MYSQL_HOST_PROD, MYSQL_USER, MYSQL_PASSWORD
+    from env import GOOGLE_API_KEY, MYSQL_DATABASE, MYSQL_HOST_DEV, MYSQL_HOST_PROD, MYSQL_USER, MYSQL_PASSWORD
 except ImportError:
     GOOGLE_API_KEY = os.getenv('GOOGLE_API_KEY')
     MYSQL_HOST_DEV = os.getenv('MYSQL_HOST_DEV')
     MYSQL_HOST_PROD = os.getenv('MYSQL_HOST_PROD')
-    MYSQL_DB = os.getenv('MYSQL_DB')
+    MYSQL_DATABASE = os.getenv('MYSQL_DATABASE')
     MYSQL_USER = os.getenv('MYSQL_USER')
     MYSQL_PASSWORD = os.getenv('MYSQL_PASSWORD')
 
@@ -41,7 +41,7 @@ def get_db():
     try:
         connection = mysql.connector.connect(
             host=mysql_host,
-            database=MYSQL_DB,
+            database=MYSQL_DATABASE,
             user=MYSQL_USER,
             password=MYSQL_PASSWORD
         )
