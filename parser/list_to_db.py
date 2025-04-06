@@ -210,6 +210,7 @@ def fetch_and_cache_venue_data(location):
         log(f"Place ID for {location} not found")
         return None
 
+    log(f"Saving place id {place_id} for location {location}")
     db = get_db()
     cursor = db.cursor(dictionary=True)
     cursor.execute("SELECT id FROM venues WHERE google_place_id = %s", [place_id])
@@ -258,7 +259,7 @@ def fetch_and_cache_venue_data(location):
         venue_data["photo"] = f"/images/venues/{filename}"
 
     elif response and len(response.photos) > 0:
-        log(f"grabbing nice photo for {location}")
+        log(f"Grabbing nice photo for {location}")
         request = places_v1.GetPhotoMediaRequest(
             name=f"{response.photos[0].name}/media",
             max_width_px=300,
@@ -268,14 +269,14 @@ def fetch_and_cache_venue_data(location):
         venue_data["photo"] = save_image(response.photo_uri, filename)
 
     else:
-        log(f"grabbing street view photo for {location}")
+        log(f"Grabbing street view photo for {location}")
         encoded_location = urllib.parse.quote_plus(venue_data["address"])
         streetview_url = f"https://maps.googleapis.com/maps/api/streetview?location={encoded_location}&size=300x300&key={GOOGLE_API_KEY}"
         venue_data["photo"] = save_image(streetview_url, filename)
 
     db = get_db()
     cursor = db.cursor()
-    log(f"saving venue data: {venue_data}")
+    log(f"Saving venue data: {venue_data}")
     cursor.execute("""INSERT INTO venues
         (google_place_id, name, address, city, lat, lng, photo)
         VALUES
@@ -413,6 +414,7 @@ def parse_list_created_date(content: str) -> datetime.date:
 
 def get_show_venue(location: str):
     if not location:
+        log(f"(get_show_venue) no location, returning")
         return None
     location = location.strip()
     cached_venue = get_venue_from_cache(location)
@@ -424,14 +426,20 @@ def get_show_venue(location: str):
 
 def get_venue_from_cache(location: str):
     if not location:
+        log(f"(get_venue_from_cache) no location, returning")
         return None
     location = location.strip()
+    log(f"Attempting to grab cached info for {location}")
     db = get_db()
     cursor = db.cursor()
     cursor.execute("""SELECT venues.* FROM locations_venues
         JOIN venues ON locations_venues.venue_id = venues.id
         WHERE location = %s""", [location])
     result = cursor.fetchone()
+    if result:
+        log(f"Cached result found for {location}")
+    else:
+        log(f"No cached result found for {location}")
     return result
 
 known_cities_cache = None
@@ -481,7 +489,7 @@ def remove_stale_shows():
     result = cursor.fetchall()
     for entry in result:
         if not entry["raw"] in show_cache:
-            log(f"show {entry['raw']} not in show_cache, deleting show id {entry['id']}")
+            log(f"Show {entry['raw']} not in show_cache, deleting show id {entry['id']}")
             cursor.execute("UPDATE bands_shows SET deleted = 1 WHERE show_id = %s", [entry["id"]])
             cursor.execute("UPDATE shows SET deleted = 1 WHERE id = %s", [entry["id"]])
     db.commit()
