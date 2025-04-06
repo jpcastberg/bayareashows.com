@@ -45,6 +45,7 @@ def get_db():
             user=MYSQL_USER,
             password=MYSQL_PASSWORD
         )
+        connection.autocommit = True
         if connection.is_connected():
             return connection
     except MysqlError as e:
@@ -284,7 +285,6 @@ def fetch_and_cache_venue_data(location):
     venue_id = cursor.lastrowid
     cursor.execute("""INSERT INTO locations_venues (location, venue_id)
         VALUES (%s, %s)""", [location, venue_id])
-    db.commit()
 
 
 
@@ -356,7 +356,6 @@ def parse_and_save_show(show: str, list_created_date: datetime.date) -> dict:
             band_id = cursor.lastrowid
         cursor.execute("""INSERT INTO bands_shows (band_id, show_id)
             VALUES (%s, %s)""", [band_id, show_id])
-    db.commit()
 
 def split_shows(shows_block: str) -> list[str]:
     shows = re.split(r"\n(?=[a-z])", shows_block)
@@ -403,7 +402,6 @@ def undelete_show(id):
     cursor = db.cursor()
     cursor.execute("UPDATE shows SET deleted = 0 WHERE id = %s", [id])
     cursor.execute("UPDATE bands_shows SET deleted = 0 WHERE id = %s", [id])
-    db.commit()
     print()
 
 def parse_list_created_date(content: str) -> datetime.date:
@@ -462,7 +460,6 @@ def save_city(city):
     db = get_db()
     cursor = db.cursor()
     cursor.execute("INSERT INTO cities (name) VALUES (%s)", [city])
-    db.commit()
 
 def write_venue_cache(new_venue_cache):
     global venue_cache
@@ -492,7 +489,6 @@ def remove_stale_shows():
             log(f"Show {entry['raw']} not in show_cache, deleting show id {entry['id']}")
             cursor.execute("UPDATE bands_shows SET deleted = 1 WHERE show_id = %s", [entry["id"]])
             cursor.execute("UPDATE shows SET deleted = 1 WHERE id = %s", [entry["id"]])
-    db.commit()
 
 def log(message: str):
     current_time = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
