@@ -5,10 +5,19 @@ import os
 import requests
 import urllib.parse
 import sys
-from env import GOOGLE_API_KEY, MYSQL_DB, MYSQL_HOST_DEV, MYSQL_HOST_PROD, MYSQL_USER, MYSQL_PASSWORD
 from google.maps import places_v1
 import mysql.connector
 from mysql.connector import Error as MysqlError
+
+try:
+    from env import GOOGLE_API_KEY, MYSQL_DB, MYSQL_HOST_DEV, MYSQL_HOST_PROD, MYSQL_USER, MYSQL_PASSWORD
+except ImportError:
+    GOOGLE_API_KEY = os.getenv('GOOGLE_API_KEY')
+    MYSQL_HOST_DEV = os.getenv('MYSQL_HOST_DEV')
+    MYSQL_HOST_PROD = os.getenv('MYSQL_HOST_PROD')
+    MYSQL_DB = os.getenv('MYSQL_DB')
+    MYSQL_USER = os.getenv('MYSQL_USER')
+    MYSQL_PASSWORD = os.getenv('MYSQL_PASSWORD')
 
 if len(sys.argv) < 2:
     print("Usage: python list_to_json.py <list_path>")

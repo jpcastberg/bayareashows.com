@@ -1,1 +1,1 @@
-55 * * * * /app/parser/run_parser.sh >> /var/log/bayareashows_parser.log 2>&1
+15 * * * * /app/parser/run_parser.sh >> /var/log/bayareashows_parser.log 2>&1
