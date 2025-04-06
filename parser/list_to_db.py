@@ -200,12 +200,14 @@ def fetch_google_place_id(location):
         return None
 
     if len(response.places) == 0:
+        log(f"Empty response for location {location}! Response: {response}")
         return None
     return response.places[0].id
 
 def fetch_and_cache_venue_data(location):
     place_id = fetch_google_place_id(location)
     if not place_id:
+        log(f"Place ID for {location} not found")
         return None
 
     db = get_db()
@@ -218,6 +220,7 @@ def fetch_and_cache_venue_data(location):
             VALUES (%s, %s)""", [location, venue_id])
         return
 
+    log(f"Fetching place information for location {location}, place id {place_id}")
     request = places_v1.GetPlaceRequest(
         name=f"places/{place_id}"
     )
@@ -225,6 +228,7 @@ def fetch_and_cache_venue_data(location):
     fieldMask = "displayName,shortFormattedAddress,addressComponents,photos,location"
     response = client.get_place(request=request, metadata=[("x-goog-fieldmask", fieldMask)])
     if not response:
+        log(f"No response for place id location {location}, place id {place_id}")
         return None
     venue_data = {}
     venue_data["google_place_id"] = place_id
@@ -254,6 +258,7 @@ def fetch_and_cache_venue_data(location):
         venue_data["photo"] = f"/images/venues/{filename}"
 
     elif response and len(response.photos) > 0:
+        log(f"grabbing nice photo for {location}")
         request = places_v1.GetPhotoMediaRequest(
             name=f"{response.photos[0].name}/media",
             max_width_px=300,
@@ -263,12 +268,14 @@ def fetch_and_cache_venue_data(location):
         venue_data["photo"] = save_image(response.photo_uri, filename)
 
     else:
+        log(f"grabbing street view photo for {location}")
         encoded_location = urllib.parse.quote_plus(venue_data["address"])
         streetview_url = f"https://maps.googleapis.com/maps/api/streetview?location={encoded_location}&size=300x300&key={GOOGLE_API_KEY}"
         venue_data["photo"] = save_image(streetview_url, filename)
 
     db = get_db()
     cursor = db.cursor()
+    log(f"saving venue data: {venue_data}")
     cursor.execute("""INSERT INTO venues
         (google_place_id, name, address, city, lat, lng, photo)
         VALUES

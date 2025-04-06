@@ -1,1 +1,1 @@
-30 * * * * /app/parser/run_parser.sh >> /var/log/bayareashows_parser.log 2>&1
+50 * * * * /app/parser/run_parser.sh >> /var/log/bayareashows_parser.log 2>&1
