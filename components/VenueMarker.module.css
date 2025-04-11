@@ -1,0 +1,29 @@
+.custom-icon {
+    border-radius: 50%;
+}
+.custom-icon .icon-wrapper {
+    position: relative;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    width: 64px;
+    height: 64px;
+}
+
+.custom-icon .icon-image {
+    object-fit: cover;
+    width: 64px !important;
+    max-height: 100%;
+    border: 2px solid white;
+    box-shadow: 0 0 4px rgba(0, 0, 0, 0.5);
+}
+
+.custom-icon .pin {
+    position: absolute;
+    bottom: 0;
+    width: 0;
+    height: 0;
+    border-left: 8px solid transparent;
+    border-right: 8px solid transparent;
+    border-top: 16px solid red; /* Adjust color as needed */
+}

@@ -2,7 +2,7 @@
 import { useState, useEffect } from "react";
 import { LatLngExpression } from "leaflet";
 import { MapContainer, TileLayer } from "react-leaflet";
-import { Venue } from "@/models/Venue";
+import { Venue } from "@/models";
 import { get } from "@/ts/api";
 import VenueMarker from "@/components/VenueMarker";
 
@@ -10,8 +10,9 @@ const position: LatLngExpression = [37.7854, -122.48414];
 export default function Map() {
     const [venues, setVenues] = useState<Venue[]>([]);
     useEffect(() => {
-        get("/parsed.json").then(data => {
-            setVenues(data.venues as Venue[]);
+        get("/api/shows").then((data) => {
+            const typedData = data as Record<string, Venue[]>;
+            setVenues(typedData.venues);
         });
     }, []);
     return (
