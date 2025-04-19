@@ -1,29 +1,28 @@
-.custom-icon {
-    border-radius: 50%;
-}
-.custom-icon .icon-wrapper {
-    position: relative;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    width: 64px;
-    height: 64px;
+.venue-marker {
+    background-color: #bababa;
+    border-radius: 8px;
+    color: #FFFFFF;
+    font-size: 14px;
+    padding: 2px;
+
 }
 
-.custom-icon .icon-image {
-    object-fit: cover;
-    width: 64px !important;
-    max-height: 100%;
-    border: 2px solid white;
-    box-shadow: 0 0 4px rgba(0, 0, 0, 0.5);
-}
-
-.custom-icon .pin {
+.venue-marker::after {
+    content: "";
     position: absolute;
-    bottom: 0;
+    left: 50%;
+    top: 100%;
+    transform: translate(-50%, 0);
     width: 0;
     height: 0;
     border-left: 8px solid transparent;
     border-right: 8px solid transparent;
-    border-top: 16px solid red; /* Adjust color as needed */
+    border-top: 8px solid #bababa;
+}
+
+.venue-image {
+    width: 100% !important;
+    height: 100% !important;
+    object-fit: cover;
+    border-radius: 15%;
 }

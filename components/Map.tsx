@@ -5,8 +5,9 @@ import { MapContainer, TileLayer } from "react-leaflet";
 import { Venue } from "@/models";
 import { get } from "@/ts/api";
 import VenueMarker from "@/components/VenueMarker";
+import Geoposition from "@/components/Geoposition";
 
-const position: LatLngExpression = [37.7854, -122.48414];
+const position: LatLngExpression = [37.778144, -122.417327];
 export default function Map() {
     const [venues, setVenues] = useState<Venue[]>([]);
     useEffect(() => {
@@ -22,6 +23,7 @@ export default function Map() {
                 center={position}
                 zoom={13}
                 scrollWheelZoom={false}>
+                <Geoposition></Geoposition>
                 <TileLayer
                     attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
                     url="https://tiles.stadiamaps.com/tiles/alidade_smooth_dark/{z}/{x}/{y}.png?api_key=2982d201-dc92-4bbd-8397-570ca544a08d"
