@@ -1,3 +1,13 @@
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+#map {
+    height: 100vh;
+}
+
 .venue-marker {
     background-color: #bababa;
     border-radius: 8px;
