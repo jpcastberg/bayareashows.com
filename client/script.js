@@ -1,4 +1,4 @@
-import L, {Map, TileLayer, Marker, LatLng, DivIcon} from '/lib/leaflet/leaflet.js';
+import {Map, TileLayer, Marker, LatLng, DivIcon} from '/lib/leaflet/leaflet.js';
 
 const map = new Map('map').setView([37.778144, -122.417327], 13);
 
@@ -15,7 +15,7 @@ async function load() {
         const customIcon = new DivIcon({
             className: "venue-marker",
             html: `
-                <img class="venue-image" src="${venue.photo}" alt="${venue.name}" title="${venue.name}" onerror="this.onerror = null; this.src = '/images/concert.jpg'" />
+                <img class="venue-image" src="${escapeHtml(venue.photo)}" alt="${escapeHtml(venue.name)}" title="${escapeHtml(venue.name)}" onerror="this.onerror = null; this.src = '/images/concert.jpg'" />
             `,
             iconSize: [48, 48], // Adjust size as needed
             // iconAnchor: [16, 48], // Anchor point to center the icon
@@ -28,17 +28,17 @@ async function load() {
 
         const popup = `<b>${venue.name}</b>
                 <br />
-                <a target="_blank" href=${getMapLink(venue)}>
-                    <small>${venue.address}</small>
+                <a target="_blank" href=${escapeHtml(getMapLink(venue))}>
+                    <small>${escapeHtml(venue.address)}</small>
                 </a>
                 ${venue.shows.map((show) => (
                     `<div>
                         ${`${formatDate(show.date)}${
                             show.start_time
-                                ? `, ${formatTime(show.start_time)}`
+                                ? `, ${escapeHtml(formatTime(show.start_time))}`
                                 : ""
                         }`}
-                        :: ${show.bands.map((band) => band.name).join(", ")}
+                        :: ${show.bands.map((band) => escapeHtml(band.name)).join(", ")}
                     </div>`
                 ))}`
         marker.bindPopup(popup);
@@ -66,8 +66,19 @@ function getMapLink(venue) {
         navigator.platform.includes("iPad") ||
         navigator.platform.includes("iPod")
     ) {
-        return `maps://maps.google.com/maps?daddr=${venue.address}&amp;ll=`;
+        return `maps://maps.google.com/maps?daddr=${encodeURIComponent(venue.address)}&amp;ll=`;
     }
 
-    return `https://maps.google.com/maps?daddr=${venue.address}&amp;ll=`;
+    return `https://maps.google.com/maps?daddr=${encodeURIComponent(venue.address)}&amp;ll=`;
+}
+
+function escapeHtml(text) {
+    const map = {
+        '&': '&amp;',
+        '<': '&lt;',
+        '>': '&gt;',
+        '"': '&quot;',
+        "'": '&#39;'
+    };
+    return text.replace(/[&<>"']/g, char => map[char]);
 }
