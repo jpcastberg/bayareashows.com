@@ -6,8 +6,8 @@ RUN curl -sL https://github.com/aptible/supercronic/releases/latest/download/sup
   chmod +x /usr/local/bin/supercronic
 RUN git clone https://github.com/jpcastberg/bayareashows.com.git /app
 WORKDIR /app
-COPY parser/supervisord.conf /etc/supervisor/conf.d/supervisord.conf
-COPY parser/logrotate.conf /etc/logrotate.d/app
+COPY supervisord.conf /etc/supervisor/conf.d/supervisord.conf
+COPY logrotate.conf /etc/logrotate.d/app
 RUN chown -R node:node /app /var/log
 USER node
 ENTRYPOINT []
