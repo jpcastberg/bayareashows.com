@@ -35,6 +35,7 @@ app.get("/api/shows", async (req, res) => {
 app.get("/tiles/:z/:x/:y.png", (req, res) => {
     const { z, x, y } = req.params;
     const url = `https://tiles.stadiamaps.com/tiles/alidade_smooth_dark/${z}/${x}/${y}.png?api_key=${process.env.STADIA_API_KEY}`;
+    console.log(url);
     fetch(url)
         .then(response => response.arrayBuffer())
         .then(buffer => {

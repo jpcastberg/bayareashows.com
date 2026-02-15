@@ -1,6 +1,6 @@
 FROM node:23-bookworm
 EXPOSE 3000
-RUN apt update && apt install -y python3 python3-venv supervisor git logrotate
+RUN apt update && apt install -y python3 python3-venv supervisor git logrotate vim
 RUN curl -sL https://github.com/aptible/supercronic/releases/latest/download/supercronic-linux-amd64 \
   -o /usr/local/bin/supercronic && \
   chmod +x /usr/local/bin/supercronic
