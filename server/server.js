@@ -46,8 +46,6 @@ app.get("/tiles/:z/:x/:y.png", (req, res) => {
 
 app.listen(port, () => {
     console.log(`Example app listening on port ${port}`);
-    console.log(`ENV: ${JSON.stringify(process.env)}`);
-
 });
 
 async function processShows(shows) {
