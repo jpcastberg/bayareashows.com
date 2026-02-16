@@ -28,7 +28,7 @@ let bandShowIndex = -1;
 let venueMarkers = new Map();
 
 new TileLayer('/tiles/{z}/{x}/{y}.png', {
-    maxZoom: 13
+    maxZoom: 18
 }).addTo(map);
 
 const initialState = readQueryState();

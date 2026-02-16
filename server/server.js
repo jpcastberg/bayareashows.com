@@ -165,7 +165,7 @@ function buildShowIcs({ show, venue, bands }) {
         lines.push("DURATION:PT2H");
     } else {
         lines.push(`DTSTART;VALUE=DATE:${formatIcsDate(date)}`);
-        lines.push(`DTEND;VALUE=DATE:${formatIcsDate(addDaysToDate(date, 1))}`);
+        lines.push(`DTEND;VALUE=DATE:${formatIcsDate(date)}`);
     }
 
     lines.push(`SUMMARY:${escapeIcsText(summary)}`);
@@ -215,11 +215,5 @@ function formatIcsDateTime(date, time) {
 
 function formatIcsTimestamp(date) {
     return date.toISOString().replace(/[-:]/g, "").replace(/\.\d{3}Z$/, "Z");
-}
-
-function addDaysToDate(dateString, days) {
-    const base = new Date(`${dateString}T00:00:00Z`);
-    base.setUTCDate(base.getUTCDate() + days);
-    return base.toISOString().slice(0, 10);
 }
 
