@@ -182,7 +182,8 @@ function buildShowIcs({ show, venue, bands }) {
         lines.push(`DESCRIPTION:${description}`);
     }
     lines.push("END:VEVENT", "END:VCALENDAR");
-
+    res.set("Content-Type", "text/calendar; charset=utf-8");
+    res.set("Content-Disposition", 'attachment; filename="event.ics"');
     return lines.join("\r\n");
 }
 
