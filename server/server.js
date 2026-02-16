@@ -152,6 +152,23 @@ function buildShowIcs({ show, venue, bands }) {
     const lines = [
         "BEGIN:VCALENDAR",
         "VERSION:2.0",
+        "BEGIN:VTIMEZONE",
+        "TZID:America/Los_Angeles",
+        "BEGIN:DAYLIGHT",
+        "TZOFFSETFROM:-0800",
+        "DTSTART:20070311T020000",
+        "RRULE:FREQ=YEARLY;BYMONTH=3;BYDAY=2SU",
+        "TZNAME:PDT",
+        "TZOFFSETTO:-0700",
+        "END:DAYLIGHT",
+        "BEGIN:STANDARD",
+        "TZOFFSETFROM:-0700",
+        "DTSTART:20071104T020000",
+        "RRULE:FREQ=YEARLY;BYMONTH=11;BYDAY=1SU",
+        "TZNAME:PST",
+        "TZOFFSETTO:-0800",
+        "END:STANDARD",
+        "END:VTIMEZONE",
         "PRODID:-//Bay Area Shows//EN",
         "CALSCALE:GREGORIAN",
         "METHOD:PUBLISH",
@@ -181,7 +198,8 @@ function buildShowIcs({ show, venue, bands }) {
     if (description) {
         lines.push(`DESCRIPTION:${description}`);
     }
-    lines.push("END:VEVENT", "END:VCALENDAR");
+
+    lines.push("PRIORITY:1", "CLASS:PUBLIC", "END:VEVENT", "END:VCALENDAR");
     return lines.join("\r\n");
 }
 
