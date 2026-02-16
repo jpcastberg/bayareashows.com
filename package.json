@@ -6,7 +6,7 @@
     "scripts": {
         "dockerPush": "sudo docker build --no-cache -t 'jpcastberg/bayareashows:latest' . && sudo docker push 'jpcastberg/bayareashows:latest'",
         "dev": "nodemon server/server.js",
-        "start": "node server/server.js"
+        "start": "nodemon server/server.js"
     },
     "keywords": [],
     "author": "",

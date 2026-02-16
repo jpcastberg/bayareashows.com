@@ -135,9 +135,9 @@ html, body {
 
 @media (max-width: 600px) {
     #controls {
-        left: 30px;
+        left: 50px;
         right: 10px;
-        width: calc(100% - 40px);
+        width: calc(100% - 60px);
     }
 }
 
