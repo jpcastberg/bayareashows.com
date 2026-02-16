@@ -5,6 +5,10 @@
   font-family: system-ui;
 }
 
+html, body {
+    background-color: black;
+}
+
 #map {
     height: 100vh;
 }
@@ -15,27 +19,27 @@
     right: 16px;
     z-index: 1000;
     background: rgba(255, 255, 255, 0.92);
-    border-radius: 12px;
-    padding: 10px 12px;
+    border-radius: 5px;
+    padding: 5px 6px;
     box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15);
 }
 
-#date-filter {
+#filters {
     display: grid;
     grid-template-columns: auto 1fr;
-    gap: 6px 10px;
+    gap: 5px;
     align-items: center;
     color: #1c1c1c;
 }
 
-#date-filter label {
+#filters label {
     font-size: 12px;
     letter-spacing: 0.03em;
     text-transform: uppercase;
 }
 
-#date-filter input[type="date"],
-#date-filter input[type="text"] {
+#filters input[type="date"],
+#filters input[type="text"] {
     border: 1px solid #b6b6b6;
     border-radius: 8px;
     padding: 4px 6px;
@@ -50,6 +54,17 @@
     gap: 6px;
 }
 
+.search-reset {
+    grid-column: span 2;
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 6px;
+}
+
+.search-reset button {
+    grid-column: span 1 !important;
+}
+
 .band-nav {
     grid-column: span 2;
     display: none;
@@ -57,7 +72,7 @@
     gap: 6px;
 }
 
-#date-filter button {
+#filters button {
     grid-column: span 2;
     border: none;
     border-radius: 8px;
@@ -68,17 +83,21 @@
     cursor: pointer;
 }
 
+.search-reset button {
+    grid-column: auto;
+}
+
 .band-nav button {
     grid-column: auto;
     background: #3b2f6f;
 }
 
-#date-filter button:disabled {
+#filters button:disabled {
     cursor: not-allowed;
     opacity: 0.5;
 }
 
-#date-filter .preset-button {
+#filters .preset-button {
     grid-column: auto;
     background: #f2f2f2;
     color: #1c1c1c;
@@ -86,15 +105,19 @@
     padding: 4px 0;
 }
 
-#date-filter button#reset-dates {
+#filters button#reset-dates {
     background: #5a5a5a;
 }
 
-#date-filter button#list-toggle {
+#filters button#list-toggle {
     background: #244c2a;
 }
 
-#date-filter button:hover {
+#filters button#controls-toggle {
+    background: #394657;
+}
+
+#filters button:hover {
     filter: brightness(0.95);
 }
 
@@ -106,11 +129,15 @@
     display: grid;
 }
 
+#controls.is-collapsed .controls-collapsible {
+    display: none;
+}
+
 @media (max-width: 600px) {
     #controls {
-        left: 10px;
+        left: 30px;
         right: 10px;
-        width: calc(100% - 20px);
+        width: calc(100% - 40px);
     }
 }
 

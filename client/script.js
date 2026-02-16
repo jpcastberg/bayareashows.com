@@ -5,13 +5,14 @@ const map = new LeafletMap('map').setView(center, 13);
 const venueLayer = new LayerGroup().addTo(map);
 
 const controls = document.getElementById("controls");
-const dateForm = document.getElementById("date-filter");
+const dateForm = document.getElementById("filters");
 const bandInput = document.getElementById("band-name");
 const startDateInput = document.getElementById("start-date");
 const endDateInput = document.getElementById("end-date");
 const resetDatesButton = document.getElementById("reset-dates");
 const bandPrevButton = document.getElementById("band-prev");
 const bandNextButton = document.getElementById("band-next");
+const controlsToggleButton = document.getElementById("controls-toggle");
 const listToggleButton = document.getElementById("list-toggle");
 const listModal = document.getElementById("list-modal");
 const listModalBody = document.getElementById("list-modal-body");
@@ -19,14 +20,15 @@ const listCount = document.getElementById("list-count");
 const presetButtons = document.querySelectorAll("[data-preset]");
 const modalCloseTargets = document.querySelectorAll("[data-modal-close]");
 
+const controlsStorageKey = "bayareashows.controlsCollapsed";
+
 let lastVenues = [];
 let bandShows = [];
 let bandShowIndex = -1;
 let venueMarkers = new Map();
 
 new TileLayer('/tiles/{z}/{x}/{y}.png', {
-    maxZoom: 13,
-    attribution: '&copy; <a href="http://www.openstreetmap.org/copyright">OpenStreetMap</a>'
+    maxZoom: 13
 }).addTo(map);
 
 const initialState = readQueryState();
@@ -51,6 +53,9 @@ if (initialState.band) {
         endDate: normalizedDates.endDate,
     });
 }
+
+restoreControlsCollapse();
+syncControlsToggle();
 
 dateForm.addEventListener("submit", (event) => {
     event.preventDefault();
@@ -154,6 +159,12 @@ modalCloseTargets.forEach((target) => {
     target.addEventListener("click", () => {
         closeListModal();
     });
+});
+
+controlsToggleButton.addEventListener("click", () => {
+    controls.classList.toggle("is-collapsed");
+    syncControlsToggle();
+    persistControlsCollapse();
 });
 
 bandPrevButton.addEventListener("click", () => {
@@ -404,6 +415,34 @@ function getSortedShows(venues) {
 
 function setBandMode(isBandMode) {
     controls.classList.toggle("is-band-mode", isBandMode);
+}
+
+function syncControlsToggle() {
+    const isCollapsed = controls.classList.contains("is-collapsed");
+    controlsToggleButton.textContent = isCollapsed ? "Show filters" : "Hide filters";
+    controlsToggleButton.setAttribute("aria-expanded", String(!isCollapsed));
+}
+
+function restoreControlsCollapse() {
+    try {
+        const saved = localStorage.getItem(controlsStorageKey);
+        if (saved === "false") {
+            controls.classList.remove("is-collapsed");
+        } else if (saved === "true") {
+            controls.classList.add("is-collapsed");
+        }
+    } catch (error) {
+        // Ignore storage access issues.
+    }
+}
+
+function persistControlsCollapse() {
+    try {
+        const isCollapsed = controls.classList.contains("is-collapsed");
+        localStorage.setItem(controlsStorageKey, String(isCollapsed));
+    } catch (error) {
+        // Ignore storage access issues.
+    }
 }
 
 function updateBandNavigation(venues) {

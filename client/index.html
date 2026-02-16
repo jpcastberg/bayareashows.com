@@ -9,29 +9,32 @@
     <script type="module" src="/script.js"></script>
 </head>
 <body>
-    <div id="controls">
-        <form id="date-filter" autocomplete="off">
-            <label for="band-name">Band</label>
-            <input id="band-name" name="band" type="text" placeholder="Search by band" />
+    <div id="controls" class="is-collapsed">
+        <form id="filters" autocomplete="off">
+            <label class="controls-collapsible" for="band-name">Band</label>
+            <input class="controls-collapsible" id="band-name" name="band" type="text" placeholder="Search by band" />
 
-            <label class="date-controls" for="start-date">Start</label>
-            <input class="date-controls" id="start-date" name="start_date" type="date" />
+            <label class="controls-collapsible date-controls" for="start-date">Start</label>
+            <input class="controls-collapsible date-controls" id="start-date" name="start_date" type="date" />
 
-            <label class="date-controls" for="end-date">End</label>
-            <input class="date-controls" id="end-date" name="end_date" type="date" />
+            <label class="controls-collapsible date-controls" for="end-date">End</label>
+            <input class="controls-collapsible date-controls" id="end-date" name="end_date" type="date" />
 
-            <div id="date-presets" class="date-controls">
+            <div id="date-presets" class="controls-collapsible date-controls">
                 <button type="button" class="preset-button" data-preset="today">Today</button>
                 <button type="button" class="preset-button" data-preset="tomorrow">Tomorrow</button>
-                <button type="button" class="preset-button" data-preset="weekend">This Weekend</button>
+                <button type="button" class="preset-button" data-preset="weekend">Weekend</button>
             </div>
 
-            <button type="submit">Search</button>
-            <button type="button" id="reset-dates">Reset</button>
-            <div class="band-nav">
+            <div class="controls-collapsible search-reset">
+                <button type="button" id="reset-dates">Reset</button>
+                <button type="submit">Search</button>
+            </div>
+            <div class="controls-collapsible band-nav">
                 <button type="button" id="band-prev">Prev show</button>
                 <button type="button" id="band-next">Next show</button>
             </div>
+            <button type="button" id="controls-toggle" aria-expanded="false">Show filters</button>
             <button type="button" id="list-toggle">Shows</button>
         </form>
     </div>
