@@ -52,7 +52,11 @@ app.get("/api/shows", async (req, res) => {
     }
 });
 
-app.get("/api/shows/:id/ics", async (req, res) => {
+app.get("/api/shows/:id/event.ics", async (req, res) => {
+    return handleShowIcs(req, res);
+});
+
+async function handleShowIcs(req, res) {
     const showId = Number.parseInt(req.params.id, 10);
 
     if (!Number.isInteger(showId)) {
@@ -89,7 +93,7 @@ app.get("/api/shows/:id/ics", async (req, res) => {
         console.error("Error generating ics:", error);
         return res.status(500).send("Failed to generate ics");
     }
-});
+}
 
 app.get("/tiles/:z/:x/:y.png", (req, res) => {
     const { z, x, y } = req.params;

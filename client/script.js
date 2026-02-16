@@ -512,7 +512,7 @@ function getMapLink(venue) {
 }
 
 function getIcsLink(showId) {
-    return `/api/shows/${encodeURIComponent(showId)}/ics`;
+    return `/api/shows/${encodeURIComponent(showId)}/event.ics`;
 }
 
 function escapeHtml(text) {
