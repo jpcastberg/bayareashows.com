@@ -140,7 +140,7 @@ async function processShows(shows) {
 }
 
 function buildShowIcs({ show, venue, bands }) {
-    const date = String(show.date);
+    const date = show.date.toISOString().split("T")[0];
     const time = show.start_time ? String(show.start_time) : "";
     const summary = buildShowSummary(show, venue, bands);
     const location = venue?.address ? escapeIcsText(venue.address) : "";
@@ -152,29 +152,8 @@ function buildShowIcs({ show, venue, bands }) {
     const lines = [
         "BEGIN:VCALENDAR",
         "VERSION:2.0",
-        "BEGIN:VTIMEZONE",
-        "TZID:America/Los_Angeles",
-        "BEGIN:DAYLIGHT",
-        "TZOFFSETFROM:-0800",
-        "DTSTART:20070311T020000",
-        "RRULE:FREQ=YEARLY;BYMONTH=3;BYDAY=2SU",
-        "TZNAME:PDT",
-        "TZOFFSETTO:-0700",
-        "END:DAYLIGHT",
-        "BEGIN:STANDARD",
-        "TZOFFSETFROM:-0700",
-        "DTSTART:20071104T020000",
-        "RRULE:FREQ=YEARLY;BYMONTH=11;BYDAY=1SU",
-        "TZNAME:PST",
-        "TZOFFSETTO:-0800",
-        "END:STANDARD",
-        "END:VTIMEZONE",
-        "PRODID:-//Bay Area Shows//EN",
-        "CALSCALE:GREGORIAN",
         "METHOD:PUBLISH",
         "BEGIN:VEVENT",
-        `UID:show-${show.id}@bayareashows.com`,
-        `DTSTAMP:${formatIcsTimestamp(new Date())}`,
     ];
 
     if (time) {
@@ -185,21 +164,27 @@ function buildShowIcs({ show, venue, bands }) {
         lines.push(`DTEND;VALUE=DATE:${formatIcsDate(date)}`);
     }
 
-    lines.push(`SUMMARY:${escapeIcsText(summary)}`);
     if (location) {
         lines.push(`LOCATION:${location}`);
     }
     if (lat !== null && lng !== null) {
         lines.push(
-            `X-APPLE-STRUCTURED-LOCATION;VALUE=URI;X-APPLE-RADIUS=70;X-APPLE-REFERENCEFRAME=0;X-TITLE=${appleTitle}:geo:${lat},${lng}`
+            `X-APPLE-STRUCTURED-LOCATION;VALUE=URI;X-APPLE-RADIUS=70;X-APPLE-REFERENCEFRAME=0;X-TITLE="${appleTitle}":geo:${lat},${lng}`
         );
         lines.push(`GEO:${lat};${lng}`);
     }
-    if (description) {
-        lines.push(`DESCRIPTION:${description}`);
-    }
 
-    lines.push("PRIORITY:1", "CLASS:PUBLIC", "END:VEVENT", "END:VCALENDAR");
+    lines.push(
+        "TRANSP: OPAQUE",
+        "SEQUENCE:0",
+        `UID:show-${show.id}@bayareashows.com`,
+        "CATEGORIES:EVENT",
+        `DTSTAMP:${formatIcsTimestamp(new Date())}`,
+        `SUMMARY:${summary}`,
+        `DESCRIPTION:${description}`,
+        "END:VEVENT",
+        "END:VCALENDAR"
+    );
     return lines.join("\r\n");
 }
 
@@ -228,7 +213,9 @@ function formatIcsDate(date) {
 
 function formatIcsDateTime(date, time) {
     const safeTime = time.length === 5 ? `${time}:00` : time;
-    return `${formatIcsDate(date)}T${safeTime.replace(/:/g, "")}`;
+    const icsDateTime = `${formatIcsDate(date)}T${safeTime.replace(/:/g, "")}`;
+    console.log("ics datetime", icsDateTime);
+    return icsDateTime;
 }
 
 function formatIcsTimestamp(date) {

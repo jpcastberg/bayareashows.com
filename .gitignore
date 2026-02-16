@@ -5,3 +5,4 @@ parser/env.py
 parser.log
 venv
 __pycache__
+supervisord.pid
