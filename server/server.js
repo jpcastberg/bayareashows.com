@@ -87,7 +87,7 @@ async function handleShowIcs(req, res) {
         const ics = buildShowIcs({ show, venue, bands });
 
         res.set("Content-Type", "text/calendar; charset=utf-8");
-        res.set("Content-Disposition", `attachment; filename="show-${show.id}.ics"`);
+        res.set("Content-Disposition", 'attachment; filename="event.ics"');
         return res.send(ics);
     } catch (error) {
         console.error("Error generating ics:", error);
@@ -182,8 +182,6 @@ function buildShowIcs({ show, venue, bands }) {
         lines.push(`DESCRIPTION:${description}`);
     }
     lines.push("END:VEVENT", "END:VCALENDAR");
-    res.set("Content-Type", "text/calendar; charset=utf-8");
-    res.set("Content-Disposition", 'attachment; filename="event.ics"');
     return lines.join("\r\n");
 }
 
