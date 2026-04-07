@@ -207,6 +207,12 @@ def fetch_google_place_id(location):
 
 def fetch_and_cache_venue_data(location):
     place_id = fetch_google_place_id(location)
+    log(f"Saving query for {location}")
+
+    db = get_db()
+    cursor = db.cursor()
+    cursor.execute("INSERT INTO queries (query) VALUES (%s) ON DUPLICATE KEY UPDATE last_queried=NOW()", [location])
+
     if not place_id:
         log(f"Place ID for {location} not found")
         return None
@@ -418,6 +424,9 @@ def get_show_venue(location: str):
     cached_venue = get_venue_from_cache(location)
     if cached_venue:
         return cached_venue
+    was_recently_queried = location_was_recently_queried(location)
+    if was_recently_queried:
+        return None
 
     fetch_and_cache_venue_data(location)
     return get_venue_from_cache(location)
@@ -439,6 +448,19 @@ def get_venue_from_cache(location: str):
     else:
         log(f"No cached result found for {location}")
     return result
+
+def location_was_recently_queried(location: str):
+    db = get_db()
+    cursor = db.cursor()
+    cursor.execute("""SELECT queries.* FROM queries
+        WHERE query = %s AND last_queried > DATE_SUB(NOW(), INTERVAL 1 WEEK)""", [location])
+    result = cursor.fetchone()
+    if result:
+        log(f"Was recently queried: {location}")
+        return True
+
+    log(f"Was not recently queried: {location}")
+    return False
 
 known_cities_cache = None
 def get_known_cities():
